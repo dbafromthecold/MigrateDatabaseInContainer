@@ -3,7 +3,7 @@ Script to migrate a database from one container to another on the same host - St
 
 Pull both the Run_Migration_v2.ps1 and docker.exe file into the same location.
 
-Usage ./Run_Migration_v2.ps1
+Usage .\Run_Migration_v2.ps1
 
 The following parameters will be asked for: -
 
