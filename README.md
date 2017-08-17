@@ -16,3 +16,9 @@ $dest           - Name of the destination container
 $database       - Name of the database to be migrated
 
 You will also be prompted to enter in details in order to connect to the SQL instance in both containers. This script assumes that the login details used are the same for both containers.
+
+
+### Docker config
+
+The daemon.json file needs to be dropped here: - C:\ProgramData\docker\config
+Warning! This will remote connections to your Docker instance. This is insecure and should only be used in a development environment
