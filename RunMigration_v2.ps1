@@ -150,7 +150,7 @@ foreach($hostdbfile in $hostdbfiles){
  }
  
 
-# connect to destination SQL instance & restore database - TO DO - RESTORE DATABASE FROM MULITPLE BACKUP FILES
+# connect to destination SQL instance & restore database
 Write-Host "Attempting to restore database..." -ForegroundColor Yellow
 try{
     $restorefilelist = "RESTORE FILELISTONLY FROM DISK = '$destbackuplocation\$databasebk'"
