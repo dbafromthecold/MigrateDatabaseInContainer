@@ -22,4 +22,4 @@ You will also be prompted to enter in details in order to connect to the SQL ins
 
 The daemon.json file needs to be dropped here: - C:\ProgramData\docker\config
 <br>
-Warning! This will remote connections to your Docker instance. This is insecure and should only be used in a development environment
+Warning! This will allow remote connections to your Docker instance. This is insecure and should only be used in a development environment
