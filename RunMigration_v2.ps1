@@ -155,7 +155,7 @@ Write-Host "Attempting to restore database..." -ForegroundColor Yellow
 try{
     $restorefilelist = "RESTORE FILELISTONLY FROM DISK = '$destbackuplocation\$databasebk'"
     $dbfiles = Invoke-Sqlcmd2 -ServerInstance "$dockerhost,$destport" -Credential $scred -Query $restorefilelist -ErrorAction Stop 
-    $restorestatement = "RESTORE DATABASE [$database] FROM DISK = '$a$databasebk' WITH"
+    $restorestatement = "RESTORE DATABASE [$database] FROM DISK = '$destbackuplocation\$databasebk' WITH"
     
     foreach($dbfile in $dbfiles){
         $physname = $dbfile.PhysicalName
