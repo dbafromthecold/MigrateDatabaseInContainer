@@ -107,12 +107,12 @@ elseif((Test-Path $hostdirectory) -eq 1){
 }
 
 
-# copy database backup onto the host  - TO DO - REPLACE DESTINATOIN FILEPATH WITH VARIABLE
+# copy database backup onto the host
 Write-Host "Copying database backup to host..." -ForegroundColor Yellow
 try{
- [string]$copytohost = "docker -H tcp://$dockerhost`:2375 cp sqlcontainer1:""C:\Program Files\Microsoft SQL Server\MSSQL14.MSSQLSERVER\MSSQL\Backup\$databasebk"" $hostdirectory"
- Invoke-Expression -Command $copytohost -ErrorAction Stop | Out-Null
- Write-Host "Successfully copied backup to host" -ForegroundColor Green
+    [string]$copytohost = "docker -H tcp://$dockerhost`:2375 cp sqlcontainer1:""$srcbackuplocation\$databasebk"" $hostdirectory"
+    Invoke-Expression -Command $copytohost -ErrorAction Stop | Out-Null
+    Write-Host "Successfully copied backup to host" -ForegroundColor Green
 }
 catch{
  Write-Host "Failed to copy backup to host" -ForegroundColor Red
@@ -121,7 +121,7 @@ catch{
 
 
 # get database backup location in destination container
-Write-Host "Retrieving database backup location in source container..." -ForegroundColor Yellow
+Write-Host "Retrieving location in destination container..." -ForegroundColor Yellow
 $getdestbackuplocation = "EXEC  master.dbo.xp_instance_regread N'HKEY_LOCAL_MACHINE', N'Software\Microsoft\MSSQLServer\MSSQLServer',N'BackupDirectory'"
 try{
     $destbackuplocation  = Invoke-Sqlcmd2 -ServerInstance "$dockerhost,$destport" -Credential $scred -Query $getdestbackuplocation -ErrorAction Stop
@@ -134,12 +134,12 @@ catch{
 }
 
 
-# copy files into destination container - TO DO - REPLACE DESTINATION FILEPATH WITH VARIABLE
+# copy files into destination container
 Write-Host "Attempting to copy files into destination container..." -ForegroundColor Yellow
 $hostdbfiles = gci $hostdirectory | ? {$_.Name -eq $databasebk}
 foreach($hostdbfile in $hostdbfiles){
     try{
-        [string]$copytodest = "docker -H tcp://$dockerhost`:2375 cp $hostdirectory$hostdbfile $dest`:""C:\Program Files\Microsoft SQL Server\MSSQL14.MSSQLSERVER\MSSQL\Backup"""
+        [string]$copytodest = "docker -H tcp://$dockerhost`:2375 cp $hostdirectory$hostdbfile $dest`:""$destbackuplocation"""
         Invoke-Expression -Command $copytodest -ErrorAction Stop | Out-Null
         Write-Host "Successfully copied $hostdbfile to destination container" -ForegroundColor Green
     }
@@ -149,6 +149,20 @@ foreach($hostdbfile in $hostdbfiles){
     }
  }
  
+
+# get default data location in destination container
+Write-Host "Retrieving default data location in source container..." -ForegroundColor Yellow
+$getdestdatalocation = "SELECT SERVERPROPERTY('INSTANCEDEFAULTDATAPATH') AS [DataDir]"
+try{
+    $destdatalocation  = Invoke-Sqlcmd2 -ServerInstance "$dockerhost,$destport" -Credential $scred -Query $getdestdatalocation -ErrorAction Stop
+    $destdatalocation = $destdatalocation.DataDir
+    Write-Host "Sucessfully retrieved default data location" -ForegroundColor Green
+}
+catch{
+    Write-Host "Failed to get default data location" -ForegroundColor Red
+    Exit
+}
+
 
 # connect to destination SQL instance & restore database
 Write-Host "Attempting to restore database..." -ForegroundColor Yellow
@@ -161,13 +175,18 @@ try{
         $physname = $dbfile.PhysicalName
         $logicalname = $dbfile.LogicalName
 
-        $movestatement = " MOVE '$logicalName' TO '$physname',"
+        $startpos = $physname.LastIndexOf("\") + 1
+        $endpos = $physname | Measure-Object -Character
+        $endpos =  $endpos.Characters - $startpos
+        $physname = $physname.substring($startpos, $endpos)
+
+        $movestatement = " MOVE '$logicalName' TO '$destdatalocation$physname',"
         $restorestatement = $restorestatement + $movestatement
     }
 
-    $restorestatement = $restorestatement + " REPLACE, RECOVERY"
+    $restorestatement = $restorestatement + " REPLACE, RECOVERY"   
+    
     Invoke-Sqlcmd2 -ServerInstance "$dockerhost,$destport" -Credential $scred -Query $restorestatement -ErrorAction Stop 
-
     Write-Host "Successfully restored database" -ForegroundColor Green
 }
 catch{
