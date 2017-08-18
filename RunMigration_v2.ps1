@@ -77,14 +77,28 @@ catch{
 # backup database
 Write-Host "Attempting to backup database..." -ForegroundColor Yellow
 try{
-    $databasebk = "$database.bak"
-    $backupdb = "IF EXISTS (SELECT DB_ID('$database')) BACKUP DATABASE [$database] TO DISK = '$srcbackuplocation\$databasebk' WITH INIT,COMPRESSION;"
-    Invoke-Sqlcmd2 -ServerInstance "$dockerhost,$sourceport" -Credential $scred -Query $backupdb -ErrorAction Stop
-    Write-Host "Successfully backed up database" -ForegroundColor Green
+    $checkdbexists = "SELECT TOP 1 name AS dbname FROM sys.databases WHERE name = '$database'"
+    $dbexists = Invoke-Sqlcmd2 -ServerInstance "$dockerhost,$sourceport" -Credential $scred -Query $checkdbexists -ErrorAction Stop
+    
+    if($dbexists){
+        try{
+            $databasebk = "$database.bak"
+            $backupdb = "IF EXISTS (SELECT DB_ID('$database')) BACKUP DATABASE [$database] TO DISK = '$srcbackuplocation\$databasebk' WITH INIT,COMPRESSION;"
+            Invoke-Sqlcmd2 -ServerInstance "$dockerhost,$sourceport" -Credential $scred -Query $backupdb -ErrorAction Stop
+            Write-Host "Successfully backed up database" -ForegroundColor Green
+        }
+        catch{
+            Write-host "Unable to check that $database exists in source container" -ForegroundColor Red
+            Exit
+        }
+    }
+    elseif(!$dbexists){
+        Write-Host "$database does not exist in source container!" -ForegroundColor Red
+        Exit
+    }   
 }
 catch{
     Write-host "Failed to backup database" -ForegroundColor Red
-    Exit
 }
 
 
